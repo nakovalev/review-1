@@ -24,9 +24,9 @@ public class PaymentService {
     public ResponseEntity<PaymentResponse> createPayment(String user, double amount) {
         lastUser = user;
         lastAmount = amount;
-        double discountedAmount = discountService.applyDiscount(user, amount);
-        balances.put(user, balances.getOrDefault(user, 0.0) + discountedAmount);
-        return ResponseEntity.ok(new PaymentResponse(user, discountedAmount, "Payment recorded"));
+        double discountedAmount = discountService.applyDiscount(lastUser, lastAmount);
+        balances.put(user, balances.getOrDefault(lastUser, 0.0) + discountedAmount);
+        return ResponseEntity.ok(new PaymentResponse(lastUser, discountedAmount, "Payment recorded"));
     }
 
     @Transactional
