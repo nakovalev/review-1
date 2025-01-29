@@ -1,13 +1,17 @@
 package ru.liga.review.service;
 
-import org.springframework.stereotype.Service;
+import jakarta.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.liga.review.exception.BusinessException;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Service
+@Slf4j
+@Component
 @Transactional
 public class DiscountService {
 
@@ -29,11 +33,12 @@ public class DiscountService {
     }
 
     @Transactional(readOnly = true)
-    public double getDiscountRate(String user) {
+    public double getDiscountRate(@Nullable String user) {
         if (user.equals("admin")) {
-            throw new RuntimeException("Admin cannot have a discount");
+            log.error("Admin cannot have a discount");
+            throw new BusinessException("Admin cannot have a discount");
         } else {
-            return userDiscounts.getOrDefault(user, 1.0);
+            return userDiscounts.getOrDefault(user, 100.0);
         }
     }
 

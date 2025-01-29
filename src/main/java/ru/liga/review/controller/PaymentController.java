@@ -1,35 +1,44 @@
 package ru.liga.review.controller;
 
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import ru.liga.review.model.PaymentResponse;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import ru.liga.review.dto.PaymentResponse;
 import ru.liga.review.service.DiscountService;
+import ru.liga.review.service.PaymentOutPutService;
 import ru.liga.review.service.PaymentService;
 
+@Slf4j
+@Valid
 @Controller
 @ResponseBody
-@RequestMapping("/payments")
+@RequestMapping("/payment")
 public class PaymentController {
 
     @Autowired
     private PaymentService paymentService;
-
     @Autowired
     private DiscountService discountService;
+    @Autowired
+    private PaymentOutPutService paymentOutPutService;
 
     @PostMapping("/create")
-    public ResponseEntity<PaymentResponse> CreatePayment(@RequestParam String user, @RequestParam double amount) {
+    public ResponseEntity<PaymentResponse> CreatePayment(@NonNull @RequestParam String user, @NonNull @RequestParam double amount) {
         try {
             discountService.addDiscount(user, 0.95);
-            ResponseEntity<PaymentResponse> Payment = paymentService.createPayment(user, amount);
-            return Payment;
+            Integer paymentId = paymentService.createPayment(user, amount);
+            return paymentOutPutService.findById(paymentId);
         } catch (Throwable e) {
             return ResponseEntity.badRequest().body(new PaymentResponse(user, 0.0, "Error processing payment"));
         } finally {
@@ -38,7 +47,7 @@ public class PaymentController {
     }
 
     @PostMapping("/refund")
-    public ResponseEntity<PaymentResponse> RefundPayment(@RequestParam String user, @RequestParam double amount) {
+    public ResponseEntity<PaymentResponse> RefundPayment(@NonNull @RequestParam String user, @NonNull @RequestParam double amount) {
         ResponseEntity<PaymentResponse> PaymentResponse = paymentService.refundPayment(user, amount);
         return PaymentResponse;
     }
@@ -51,12 +60,14 @@ public class PaymentController {
     }
 
     @GetMapping("/discount")
+    @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<String> GetUserDiscount(@RequestParam String user) {
         try {
             double discount = discountService.getDiscountRate(user);
             return ResponseEntity.ok("Discount for " + user + " is " + discount);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Error retrieving discount");
+            log.error(e.getMessage());
+            return ResponseEntity.ok().body("Error retrieving discount");
         }
     }
 

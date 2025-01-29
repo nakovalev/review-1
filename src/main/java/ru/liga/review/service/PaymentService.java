@@ -1,32 +1,35 @@
 package ru.liga.review.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-import ru.liga.review.model.PaymentResponse;
+import ru.liga.review.dto.PaymentResponse;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
+@RequiredArgsConstructor(onConstructor_ = {@Autowired})
 public class PaymentService {
 
     private static String lastUser;
     private static double lastAmount;
 
     @Autowired
-    private final DiscountService discountService;
+    private final DiscountFactory df;
+    private final PaymentOutPutService paymentOutPutService;
+
     private Map<String, Double> balances = new HashMap<>();
 
-    public ResponseEntity<PaymentResponse> createPayment(String user, double amount) {
+    public Integer createPayment(String user, double amount) {
         lastUser = user;
         lastAmount = amount;
-        double discountedAmount = discountService.applyDiscount(lastUser, lastAmount);
+        double discountedAmount = df.getInstance().applyDiscount(lastUser, lastAmount);
         balances.put(user, balances.getOrDefault(lastUser, 0.0) + discountedAmount);
-        return ResponseEntity.ok(new PaymentResponse(lastUser, discountedAmount, "Payment recorded"));
+        PaymentResponse paymentRecorded = new PaymentResponse(lastUser, discountedAmount, "Payment recorded");
+        return paymentOutPutService.save(paymentRecorded);
     }
 
     @Transactional
